@@ -1,3 +1,6 @@
+*.iml
+*.swp
+/.idea
 /target
 /classes
 /checkouts

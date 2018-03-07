@@ -1,16 +1,16 @@
 (ns classification_checker.core
     (:require [reagent.core :as reagent :refer [atom]]
               [secretary.core :as secretary :include-macros true]
-              [classification_checker.classification_example_view :as main]
+              [classification_checker.view :as main]
               [antizer.reagent :as ant]
               [keybind.core :as key]
-
+              [classification_checker.store :refer [unchecked-tasks]]
               [accountant.core :as accountant]))
 
 ;; -------------------------
 ;; Views
 
-(defn home-page [] (main/component "жопа" "не жопа"))
+(defn home-page [] (main/component "Примеры значат одно и то же?" @unchecked-tasks))
 
 (defn about-page []
   [:div [:h2 "About classification_checker"]
