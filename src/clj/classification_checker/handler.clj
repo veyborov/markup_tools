@@ -8,6 +8,9 @@
             [classification_checker.middleware :refer [wrap-middleware]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.json :refer [wrap-json-params]]
+            [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
+            [clojure.core.async :refer [go-loop]]
             [config.core :refer [env]]))
 
 (use 'ring.middleware.session.cookie)
@@ -36,16 +39,51 @@
   (-> (see-other "/check-markup")
       (assoc-in [:session :email] email)))
 
+(defn csv-data->maps [csv-data]
+  (map zipmap
+       (->> (first csv-data) ;; First row is the header
+            (map keyword) ;; Drop if you want string keys instead
+            repeat)
+       (rest csv-data)))
+
+(def batch-size 2)
+(def flush-timeout 1000)
+
+(def input-queue (atom '[]))
+(def output-queue (atom '[]))
+
+  (go-loop []
+    (do
+      (Thread/sleep flush-timeout)
+      (if (> (count @output-queue) batch-size)
+        (do
+          (with-open [writer (io/writer "checked.csv" :append true)]
+            (csv/write-csv writer (map vals @output-queue)))
+          (reset! output-queue '[])
+          ))
+      (recur)))
+
+(defn uuid [] (str (java.util.UUID/randomUUID)))
+
+(with-open [reader (io/reader "first_classification.csv")]
+  (reset! input-queue (map (fn [ex] (conj ex {:value (:question ex) :id (uuid)})) (apply vector (csv-data->maps (csv/read-csv reader))))))
+
+(defn next-batch []
+  (defn take-rand [n coll]
+    (take n (shuffle coll)))
+  (take-rand batch-size @input-queue))
+
 (defroutes routes
   (GET "/" [] (main-page))
   (GET "/check-markup" {session :session} (if-login session main-page))
   (GET "/about" [] (main-page))
   (GET "/login" [] (main-page))
   (POST "/login" [& req] (login! (:email req)))
-  (GET "/batch" {session :session} (if-login session #(response [{:id "1" :class "c1" :value "v11"} {:id "2" :class "c2" :value "v2"} {:id "3" :class "c3" :value "v3"}] )))
-  (POST "/batch" {session :session} (if-login session #(do
-                                       (prn session)
-                                       (accepted))))
+  (GET "/batch" {session :session} (if-login session #(response (next-batch) )))
+  (POST "/batch" {session :session body :params}
+    (if-login session #(do
+                         (swap! output-queue concat (map (partial conj {:assessor (:email session)}) (:batch body)))
+                         (accepted))))
 
   (resources "/")
   (not-found "Not Found"))

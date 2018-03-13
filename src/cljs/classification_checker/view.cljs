@@ -11,7 +11,7 @@
   (let [example (first examples)]
     (defn click-right [] (action/emit :marked-right example))
     (defn click-wrong [] (action/emit :marked-wrong example))
-    (defn click-skip [] (action/emit :skiped example))
+    (defn click-skip [] (action/emit :skipped example))
     (key/bind! "r" ::next click-right)
     (key/bind! "w" ::next click-wrong)
     (key/bind! "space" ::next click-skip)

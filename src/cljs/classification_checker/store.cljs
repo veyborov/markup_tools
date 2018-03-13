@@ -3,7 +3,6 @@
   (:require [reagent.core :as reagent]
             [classification_checker.dispatcher :as dispatcher]
             [classification_checker.example :as example]
-            [classification_checker.core :refer [go-to-login!]]
             [cljs-http.client :as http]
             [cljs.core.async :refer [<!]]
             [classification_checker.util :as util]))
@@ -11,7 +10,9 @@
 (def unchecked-tasks (reagent/atom '[]))
 (def checked-tasks (atom '[]))
 
-(enable-console-print!)
+(defn go-to-login! []
+  (defn redirect! [loc] (set! (.-location js/window) loc))
+  (redirect! "/login"))
 
 (defn download-batch! []
   (if (empty? @unchecked-tasks)
@@ -20,7 +21,7 @@
             (let [batch (js->clj(:body response))] (reset! unchecked-tasks batch))
             (go-to-login!))))))
 
-(defn upload-batch! [] (go (let [response (<! (http/post "/batch" {:with-credentials? false :json-params @checked-tasks}))]
+(defn upload-batch! [] (go (let [response (<! (http/post "/batch" {:with-credentials? false :json-params {:batch @checked-tasks}}))]
                              (if (= (:status response) 202) (reset! checked-tasks '[]) (go-to-login!)) )))
 
 (defn check! [is-right? ex]
@@ -30,4 +31,5 @@
 
 (dispatcher/register :marked-right (partial check! example/right))
 (dispatcher/register :marked-wrong (partial check! example/wrong))
-(dispatcher/register :skiped (partial check! example/unknown))
+(dispatcher/register :skipped (partial check! example/unknown))
+(dispatcher/register :initialized (fn [email] (download-batch!)))

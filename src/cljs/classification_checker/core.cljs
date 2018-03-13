@@ -9,6 +9,8 @@
             [cljs.core.async :refer [<!]]
             [accountant.core :as accountant]))
 
+(enable-console-print!)
+
 ;; -------------------------
 ;; Views
 
@@ -22,7 +24,6 @@
 
 
 (defn redirect! [loc] (set! (.-location js/window) loc))
-(defn go-to-login! [] (redirect! "/login"))
 
 (defn login-page []
   (defn email [obj]
