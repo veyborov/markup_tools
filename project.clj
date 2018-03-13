@@ -21,6 +21,7 @@
                  [cljs-http "0.1.44"]
                  [metosin/ring-http-response "0.9.0"]
                  [ring/ring-json "0.4.0"]
+                 [org.clojure/data.csv "0.1.4"]
                  [venantius/accountant "0.2.4"
                   :exclusions [org.clojure/tools.reader]]]
 

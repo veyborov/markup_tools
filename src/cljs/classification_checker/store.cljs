@@ -2,32 +2,37 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [reagent.core :as reagent]
             [classification_checker.dispatcher :as dispatcher]
-            [classification_checker.example :as example]
-            [classification_checker.core :refer [go-to-login!]]
+            [classification_checker.types :refer [example-right example-wrong example-unknown example-from-class-value example-equals]]
             [cljs-http.client :as http]
-            [cljs.core.async :refer [<!]]
-            [classification_checker.util :as util]))
+            [cljs.core.async :refer [<!]]))
 
-(def unchecked-tasks (reagent/atom '[]))
-(def checked-tasks (atom '[]))
-
-(enable-console-print!)
+(defonce current-user (reagent/atom "unknown"))
+(defonce unchecked-tasks (reagent/atom '[]))
+(defonce checked-tasks (atom '[]))
 
 (defn download-batch! []
-  (if (empty? @unchecked-tasks)
-    (go (let [response (<! (http/get "/batch" {:with-credentials? false}))]
-          (if (= (:status response) 200)
-            (let [batch (js->clj(:body response))] (reset! unchecked-tasks batch))
-            (go-to-login!))))))
+  (defn go-to-login! []
+    (defn redirect! [loc] (set! (.-location js/window) loc))
+    (redirect! "/login"))
+  (go (let [response (<! (http/get "/batch" {:with-credentials? false}))]
+        (if (= (:status response) 200)
+          (defn input->example [ex] (example-from-class-value (:class ex) (:value ex)))
+          (let [resp (js->clj (:body response))
+                ; batch (map input->example resp)
+                ]
+            (swap! unchecked-tasks conj resp))
+          (go-to-login!)))))
 
 (defn upload-batch! [] (go (let [response (<! (http/post "/batch" {:with-credentials? false :json-params @checked-tasks}))]
                              (if (= (:status response) 202) (reset! checked-tasks '[]) (go-to-login!)) )))
 
-(defn check! [is-right? ex]
-  (swap! unchecked-tasks (partial remove #(= (example/id ex) (example/id %))))
-  (swap! checked-tasks conj (example/is-right ex is-right?))
+(defn check! [setter ex]
+  (swap! unchecked-tasks (partial remove #(example-equals ex %)))
+  (swap! checked-tasks conj (setter @current-user ex))
   (if (empty? @unchecked-tasks) (do (upload-batch!) (download-batch!)) ))
 
-(dispatcher/register :marked-right (partial check! example/right))
-(dispatcher/register :marked-wrong (partial check! example/wrong))
-(dispatcher/register :skiped (partial check! example/unknown))
+(dispatcher/register :marked-right #(check! example-right %))
+(dispatcher/register :marked-wrong #(check! example-wrong %))
+(dispatcher/register :skipped #(check! example-unknown %))
+(dispatcher/register :logged-in #((do (reset! current-user %) (download-batch!))))
+

@@ -8,6 +8,8 @@
             [classification_checker.middleware :refer [wrap-middleware]]
             [ring.middleware.keyword-params :refer [wrap-keyword-params]]
             [ring.middleware.json :refer [wrap-json-params]]
+            [clojure.data.csv :as csv]
+            [clojure.java.io :as io]
             [config.core :refer [env]]))
 
 (use 'ring.middleware.session.cookie)
@@ -35,6 +37,10 @@
 (defn login! [email]
   (-> (see-other "/check-markup")
       (assoc-in [:session :email] email)))
+
+(defn read-example []
+  (with-open [rdr (io/reader *in*)]
+    (first (csv/read-csv rdr))))
 
 (defroutes routes
   (GET "/" [] (main-page))
