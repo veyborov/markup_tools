@@ -1,0 +1,25 @@
+- hosts: tools
+  tasks:
+    - name: Installs java
+      apt: pkg=openjdk-8-jdk state=installed update_cache=true
+    - name: Installs zsh
+      apt: pkg=zsh state=installed update_cache=true
+    - name: Installs tree
+      apt: pkg=tree state=installed update_cache=true
+    - name: Installs rlwrap
+      apt: pkg=rlwrap state=installed update_cache=true
+    - name: Installs tmux
+      apt: pkg=tmux state=installed update_cache=true
+
+    - user:
+        name: vadim
+        shell: /bin/zsh
+        groups: sudo,adm
+        password: $1$SomeSalt$.SUxxp6Ii0ddWXBXurdLE.
+        append: yes
+
+    - name: Set authorized key took from file
+      authorized_key:
+        user: vadim
+        state: present
+        key: "{{ lookup('file', '/home/vad/.ssh/id_rsa.pub') }}"

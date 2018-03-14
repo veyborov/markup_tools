@@ -52,16 +52,16 @@
 (def input-queue (atom '[]))
 (def output-queue (atom '[]))
 
-  (go-loop []
-    (do
-      (Thread/sleep flush-timeout)
-      (if (> (count @output-queue) batch-size)
-        (do
-          (with-open [writer (io/writer "checked.csv" :append true)]
-            (csv/write-csv writer (map vals @output-queue)))
-          (reset! output-queue '[])
-          ))
-      (recur)))
+(go-loop []
+  (do
+    (Thread/sleep flush-timeout)
+    (if (> (count @output-queue) batch-size)
+      (do
+        (with-open [writer (io/writer "checked.csv" :append true)]
+          (csv/write-csv writer (map vals @output-queue)))
+        (reset! output-queue '[])
+        ))
+    (recur)))
 
 (defn uuid [] (str (java.util.UUID/randomUUID)))
 

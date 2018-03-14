@@ -1,3 +1,5 @@
+*.csv
+*.retry
 *.iml
 *.swp
 /.idea
