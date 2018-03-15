@@ -1,4 +1,4 @@
-(ns classification_checker.views
+(ns classification_checker.controls
   (:require
     [antizer.reagent :as ant]
     [keybind.core :as key]

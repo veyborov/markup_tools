@@ -1,6 +1,5 @@
 (ns classification_checker.core
-  (:require [classification_checker.views :refer [paraphrase-view identification-view]]
-            [classification_checker.dispatcher :as dispatcher]
+  (:require [classification_checker.controls :refer [paraphrase-view identification-view]]
             [classification_checker.store :refer [current-task]]
             [reagent.core :as reagent :refer [atom]]
             [secretary.core :as secretary :include-macros true]
