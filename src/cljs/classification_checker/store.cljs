@@ -2,34 +2,70 @@
   (:require-macros [cljs.core.async.macros :refer [go]])
   (:require [reagent.core :as reagent]
             [classification_checker.dispatcher :as dispatcher]
-            [classification_checker.example :as example]
             [cljs-http.client :as http]
-            [cljs.core.async :refer [<!]]
-            [classification_checker.util :as util]))
+            [classification_checker.example :as example]
+            [cljs.core.async :refer [<!]]))
 
-(def unchecked-tasks (reagent/atom '[]))
-(def checked-tasks (atom '[]))
+(def unchecked-tasks (atom {}))
+(def checked-tasks (atom []))
+(def nilExample (example/paraphrase-example {:utterance1 nil :utterance2 nil}))
+(def current-task (reagent/atom nilExample))
 
-(defn go-to-login! []
-  (defn redirect! [loc] (set! (.-location js/window) loc))
+(defn redirect! [loc] (set! (.-location js/window) loc))
+
+(defn login! []
+
+
+
+
+
+
+        (go (let [response (<! (http/post "/login" {:with-credentials? false :json-params {:email (email values)}}))]
+            (if (= (:status response) 200) (redirect! "/check-markup")
+              ;TODO
+              )))
+
   (redirect! "/login"))
 
 (defn download-batch! []
-  (if (empty? @unchecked-tasks)
-    (go (let [response (<! (http/get "/batch" {:with-credentials? false}))]
-          (if (= (:status response) 200)
-            (let [batch (js->clj(:body response))] (reset! unchecked-tasks batch))
-            (go-to-login!))))))
+  (go (let [
+             response (<! (http/get "/batch" {:with-credentials? false}))
+             batch (js->clj(:body response))] ;TODO
+        (if (= (:status response) 200)
+          (reset! unchecked-tasks batch)
+          (dispatcher/emit :login-needed nil)))))
 
-(defn upload-batch! [] (go (let [response (<! (http/post "/batch" {:with-credentials? false :json-params {:batch @checked-tasks}}))]
-                             (if (= (:status response) 202) (reset! checked-tasks '[]) (go-to-login!)) )))
+(defn upload-batch! [] (go (let [
+                                  response (<! (http/post "/batch" {:with-credentials? false :json-params {:batch @checked-tasks}}))]
+                             (if (= (:status response) 202)
+                               (reset! checked-tasks '[])
+                               (dispatcher/emit :login-needed nil)))))
 
-(defn check! [is-right? ex]
-  (swap! unchecked-tasks (partial remove #(= (example/id ex) (example/id %))))
-  (swap! checked-tasks conj (example/is-right ex is-right?))
-  (if (empty? @unchecked-tasks) (do (upload-batch!) (download-batch!)) ))
+(dispatcher/register :next-page-selected (fn []
+                                           (if (empty? @unchecked-tasks) (do (upload-batch!) (download-batch!)))
+                                           (if-let [
+                                                          id (example/id (first @unchecked-tasks))
+                                                          example (get @unchecked-tasks id)]
+                                               (do
+                                                 (redirect! (str "/paraphrase/" id))
+                                                 (reset! current-task example)))))
 
-(dispatcher/register :marked-right (partial check! example/right))
-(dispatcher/register :marked-wrong (partial check! example/wrong))
-(dispatcher/register :skipped (partial check! example/unknown))
-(dispatcher/register :initialized (fn [email] (download-batch!)))
+(defn check! [setter id] (let [
+                                task (get @unchecked-tasks id)
+                                checked-task (setter task "" "")]
+                           (swap! checked-task conj checked-task)
+                           (swap! unchecked-tasks #(dissoc % id))
+                           (dispatcher/emit :next-page-selected nil)))
+
+(dispatcher/register :marked-right (fn [id] (check! example/right id) ))
+(dispatcher/register :marked-wrong (fn [id] (check! example/wrong id) ))
+(dispatcher/register :skipped (fn [id]
+                                (let [
+                                       task (get @unchecked-tasks id)]
+                                  (swap! unchecked-tasks #(dissoc % id))
+                                  (dispatcher/emit :next-page-selected nil))))
+
+(dispatcher/register :login-needed (fn [_] (if (= (.-location js/window) "/new-session")
+                                             (redirect! "/new-session"))))
+
+(dispatcher/register :email-received (fn [id] (check! example/right id) ))

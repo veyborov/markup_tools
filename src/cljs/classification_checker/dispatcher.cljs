@@ -1,15 +1,20 @@
-(ns classification_checker.dispatcher)
+(ns classification_checker.dispatcher
+  (:require-macros
+    [cljs.core.async.macros :refer [go-loop]])
+  (:require
+    [cljs.core.async :refer [chan put! <! >!]]))
 
-(def dispatcher (atom {}))
 (def actions (atom {}))
 
-(defn emit [action data]
-  (swap! dispatcher #(merge {:action action} data)))
+(defn register [action callback] (swap! actions conj {action callback}))
 
-(defn register [action callback]
-  (swap! actions conj {action callback}))
+(defonce event-queue (chan))
 
-(add-watch dispatcher :watcher
-           (fn [key atom old-state new-state]
-             (if-let [action (get @actions (:action new-state))]
-               (action new-state))))
+(go-loop []
+  (if-let [
+            {action :action data :payload} (<! event-queue)
+            callback (get @actions action)]
+    (callback data)
+    (recur)))
+
+(defn emit [action payload] (put! {:action action :payload payload}))
