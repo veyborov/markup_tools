@@ -2,7 +2,7 @@
 
 (defrecord UserInfo [email])
 
-(defn user
+(defn user-info
   "creates user info"
   [{:keys [email]}]
-  (->User email))
+  (->UserInfo email))

@@ -22,10 +22,9 @@
 
 (defn current-page [] @page)
 
-(secretary/defroute "/new-session" [] (reset! page #'login-page))
-(secretary/defroute "/paraphrase/:id" {id :id}
-                    (dispatcher/emit :page-selected id)
-                    (reset! page #'check-markup-page))
+(secretary/defroute "/" [] (set! (.-location js/window) "/session/new"))
+(secretary/defroute "/session/new" [] (reset! page #'login-page))
+(secretary/defroute "/paraphrase/current" [] (reset! page #'check-markup-page))
 
 ;; -------------------------
 ;; Initialize app

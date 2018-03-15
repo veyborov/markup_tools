@@ -3,6 +3,7 @@
     [antizer.reagent :as ant]
     [keybind.core :as key]
     [classification_checker.example :as example]
+    [classification_checker.user :as user]
     [classification_checker.dispatcher :as dispatcher]))
 
 (defn buttons [on-ok on-cancel on-skip]
@@ -40,7 +41,7 @@
                                (let [v (aget values key)]
                                  (if (= "function" (goog/typeOf v)) result (assoc result key v))))
                              (reduce {} (.getKeys goog/object values))))))
-        (dispatcher/emit :email-received email))))
+        (dispatcher/emit :email-received (user/user-info email)))))
 
   (ant/create-form (fn [props] (let [form (ant/get-form) submit-handler #(ant/validate-fields form submit-form-if-valid)]
                                  [:div {:style { :display "flex" :align-items "center" :justify-content "center" :height "100%"} }

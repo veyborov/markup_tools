@@ -13,49 +13,39 @@
 
 (defn redirect! [loc] (set! (.-location js/window) loc))
 
-(defn login! []
+(defn process-response! [response ok-callback] (cond
+                                      (= (:status response) 200) (ok-callback)
+                                      (= (:status response) 403) (dispatcher/emit :login-needed nil)
+                                                :else (binding [*out* *err*] (println (str "error code " (:status response))))))
 
-
-
-
-
-
-        (go (let [response (<! (http/post "/login" {:with-credentials? false :json-params {:email (email values)}}))]
-            (if (= (:status response) 200) (redirect! "/check-markup")
-              ;TODO
-              )))
-
-  (redirect! "/login"))
+(defn create-session! [user]
+  (go (let [response (<! (http/post "/session/new" {:with-credentials? false :json-params {:user (clj->js user)}}))]
+        (process-response! response (fn [] (redirect! "/paraphrase/current"))))))
 
 (defn download-batch! []
   (go (let [
              response (<! (http/get "/batch" {:with-credentials? false}))
-             batch (js->clj(:body response))] ;TODO
-        (if (= (:status response) 200)
-          (reset! unchecked-tasks batch)
-          (dispatcher/emit :login-needed nil)))))
+             batch (:batch (js->clj(:body response)))
+             examples (into (hash-map) (map batch (fn [ex] {(example/id ex) ex} )))]
+        (process-response! response (fn [] (reset! unchecked-tasks examples))))))
 
 (defn upload-batch! [] (go (let [
                                   response (<! (http/post "/batch" {:with-credentials? false :json-params {:batch @checked-tasks}}))]
-                             (if (= (:status response) 202)
-                               (reset! checked-tasks '[])
-                               (dispatcher/emit :login-needed nil)))))
+                             (process-response! response (fn [] (reset! checked-tasks '[]))))))
 
-(dispatcher/register :next-page-selected (fn []
-                                           (if (empty? @unchecked-tasks) (do (upload-batch!) (download-batch!)))
-                                           (if-let [
-                                                          id (example/id (first @unchecked-tasks))
-                                                          example (get @unchecked-tasks id)]
-                                               (do
-                                                 (redirect! (str "/paraphrase/" id))
-                                                 (reset! current-task example)))))
+(defn next-page! []
+      (if (empty? @unchecked-tasks) (do (upload-batch!) (download-batch!)))
+      (if-let [
+                id (example/id (first @unchecked-tasks))
+                example (get @unchecked-tasks id)]
+        (reset! current-task example)))
 
 (defn check! [setter id] (let [
                                 task (get @unchecked-tasks id)
                                 checked-task (setter task "" "")]
                            (swap! checked-task conj checked-task)
                            (swap! unchecked-tasks #(dissoc % id))
-                           (dispatcher/emit :next-page-selected nil)))
+                           (next-page!)))
 
 (dispatcher/register :marked-right (fn [id] (check! example/right id) ))
 (dispatcher/register :marked-wrong (fn [id] (check! example/wrong id) ))
@@ -63,9 +53,9 @@
                                 (let [
                                        task (get @unchecked-tasks id)]
                                   (swap! unchecked-tasks #(dissoc % id))
-                                  (dispatcher/emit :next-page-selected nil))))
+                                  (next-page!))))
 
-(dispatcher/register :login-needed (fn [_] (if (= (.-location js/window) "/new-session")
-                                             (redirect! "/new-session"))))
+(dispatcher/register :login-needed (fn [_] (if (= (.-location js/window) "/session/new")
+                                             (redirect! "/session/new"))))
 
-(dispatcher/register :email-received (fn [id] (check! example/right id) ))
+(dispatcher/register :email-received (fn [user] (create-session! user)))

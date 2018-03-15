@@ -17,4 +17,4 @@
     (callback data)
     (recur)))
 
-(defn emit [action payload] (put! {:action action :payload payload}))
+(defn emit [action payload] (put! actions {:action action :payload payload}))
