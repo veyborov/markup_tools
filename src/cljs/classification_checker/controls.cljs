@@ -1,6 +1,7 @@
 (ns classification_checker.controls
   (:require
     [antizer.reagent :as ant]
+    [reagent.core :as r]
     [keybind.core :as key]
     [classification_checker.example :as example]
     [classification_checker.user :as user]
@@ -25,12 +26,14 @@
    [ant/layout
     [ant/layout-header [:h1 title] ]
     [ant/layout-content {:class "content"}
-     (if (= nil example) [:div]
+     (if (nil? example) [:div]
        [:div {:style {:width "100%"}}
         [:div {:class "example"} (:utterance1 example)]
         [:div {:class "example-class"} (:utterance2 example)] ])]
     [ant/layout-footer {:class "footer"}
-     (reagent/as-element [common/buttons click-right click-wrong click-skip])]]])
+     (if (nil? example)
+       (r/as-element [buttons nil nil nil])
+       (r/as-element [buttons click-right click-wrong click-skip]))]]])
 
 (defn identification-view []
   (defn submit-form-if-valid [errors values]
@@ -41,9 +44,9 @@
                                (let [v (aget values key)]
                                  (if (= "function" (goog/typeOf v)) result (assoc result key v))))
                              (reduce {} (.getKeys goog/object values))))))
-        (dispatcher/emit :email-received (user/user-info email)))))
+        (dispatcher/emit :email-received (user/user-info {:email email})))))
 
-  (ant/create-form (fn [props] (let [form (ant/get-form) submit-handler #(ant/validate-fields form submit-form-if-valid)]
+  (ant/create-form (fn [_] (let [form (ant/get-form) submit-handler #(ant/validate-fields form submit-form-if-valid)]
                                  [:div {:style { :display "flex" :align-items "center" :justify-content "center" :height "100%"} }
                                   [ant/form {:layout "horizontal" :on-submit #(do (.preventDefault %) (submit-handler))}
                                    [ant/form-item {:label "Email"}

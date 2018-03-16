@@ -8,7 +8,7 @@
 
 (defrecord ParaphraseExample [utterance1 utterance2 is-same? assessor mark-time]
   ParaphraseClassification
-  (id [this] (hash this))
+  (id [this] (if (some? this) (hash this)))
   (right [this assessor timestamp] (->ParaphraseExample utterance1 utterance2 true assessor timestamp))
   (wrong [this assessor timestamp] (->ParaphraseExample utterance1 utterance2 false assessor timestamp))
   (unknown [this assessor timestamp] (->ParaphraseExample utterance1 utterance2 nil assessor timestamp)))

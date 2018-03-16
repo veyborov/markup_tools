@@ -11,11 +11,10 @@
 (defonce event-queue (chan))
 
 (go-loop []
-  (if-let [
-           ;event (<! event-queue)
+  (let [
             {action :action data :payload} (<! event-queue)
             callback (get @actions action)]
-    (callback data)
-    (recur)))
+    (if (some? callback) (callback data)))
+    (recur))
 
-(defn emit [action payload] (put! actions {:action action :payload payload}))
+(defn emit [action payload] (put! event-queue {:action action :payload payload}))

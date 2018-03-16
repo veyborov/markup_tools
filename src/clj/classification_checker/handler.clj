@@ -34,10 +34,10 @@
      (include-js "/js/app.js")]))
 
 (defn if-login [session ok-response]
-  (if (contains? session :email) (ok-response) (forbidden)))
+  (if (and (contains? session :user) (some? ((:user session) :email))) (ok-response) (forbidden)))
 
 (defn login! [user]
-  (-> (see-other "/check-markup")
+  (-> (see-other "/paraphrase/current")
       (assoc-in [:session :user] user)))
 
 (defn csv-data->maps [csv-data]
@@ -64,7 +64,7 @@
         ))
     (recur)))
 
-(with-open [reader (io/reader "first_classification.csv")]
+(with-open [reader (io/reader "input.csv")]
   (reset! input-queue (map (fn [ex]
                              (example/paraphrase-example {:utterance1 (:question ex) :utterance2 (:class ex) }))
                            (apply vector (csv-data->maps (csv/read-csv reader))))))
