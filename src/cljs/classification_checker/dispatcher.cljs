@@ -12,6 +12,7 @@
 
 (go-loop []
   (if-let [
+           ;event (<! event-queue)
             {action :action data :payload} (<! event-queue)
             callback (get @actions action)]
     (callback data)
