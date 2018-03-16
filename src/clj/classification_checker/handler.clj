@@ -11,6 +11,7 @@
             [clojure.data.csv :as csv]
             [clojure.java.io :as io]
             [clojure.core.async :refer [go-loop]]
+            [classification_checker.example :as example]
             [config.core :refer [env]]))
 
 (use 'ring.middleware.session.cookie)
@@ -33,11 +34,11 @@
      (include-js "/js/app.js")]))
 
 (defn if-login [session ok-response]
-  (if (contains? session :email) (ok-response) (forbidden)))
+  (if (and (contains? session :user) (some? ((:user session) :email))) (ok-response) (forbidden)))
 
-(defn login! [email]
-  (-> (see-other "/check-markup")
-      (assoc-in [:session :email] email)))
+(defn login! [user]
+  (-> (see-other "/paraphrase/current")
+      (assoc-in [:session :user] user)))
 
 (defn csv-data->maps [csv-data]
   (map zipmap
@@ -52,21 +53,21 @@
 (def input-queue (atom '[]))
 (def output-queue (atom '[]))
 
-  (go-loop []
-    (do
-      (Thread/sleep flush-timeout)
-      (if (> (count @output-queue) batch-size)
-        (do
-          (with-open [writer (io/writer "checked.csv" :append true)]
-            (csv/write-csv writer (map vals @output-queue)))
-          (reset! output-queue '[])
-          ))
-      (recur)))
+(go-loop []
+  (do
+    (Thread/sleep flush-timeout)
+    (if (> (count @output-queue) batch-size)
+      (do
+        (with-open [writer (io/writer "checked.csv" :append true)]
+          (csv/write-csv writer (map vals @output-queue)))
+        (reset! output-queue '[])
+        ))
+    (recur)))
 
-(defn uuid [] (str (java.util.UUID/randomUUID)))
-
-(with-open [reader (io/reader "first_classification.csv")]
-  (reset! input-queue (map (fn [ex] (conj ex {:value (:question ex) :id (uuid)})) (apply vector (csv-data->maps (csv/read-csv reader))))))
+(with-open [reader (io/reader "input.csv")]
+  (reset! input-queue (map (fn [ex]
+                             (example/paraphrase-example {:utterance1 (:question ex) :utterance2 (:class ex) }))
+                           (apply vector (csv-data->maps (csv/read-csv reader))))))
 
 (defn next-batch []
   (defn take-rand [n coll]
@@ -75,14 +76,13 @@
 
 (defroutes routes
   (GET "/" [] (main-page))
-  (GET "/check-markup" {session :session} (if-login session main-page))
-  (GET "/about" [] (main-page))
-  (GET "/login" [] (main-page))
-  (POST "/login" [& req] (login! (:email req)))
-  (GET "/batch" {session :session} (if-login session #(response (next-batch) )))
+  (GET "/paraphrase/current" {session :session} (if-login session main-page))
+  (GET "/session/new" [] (main-page))
+  (POST "/session/new" [& req] (login! (:user req)))
+  (GET "/batch" {session :session} (if-login session #(response {:batch (next-batch)} )))
   (POST "/batch" {session :session body :params}
     (if-login session #(do
-                         (swap! output-queue concat (map (partial conj {:assessor (:email session)}) (:batch body)))
+                         (swap! output-queue concat (map (partial conj {:assessor (:email (:user session))}) (:batch body)))
                          (accepted))))
 
   (resources "/")
