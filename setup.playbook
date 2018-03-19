@@ -10,7 +10,22 @@
       apt: pkg=rlwrap state=installed update_cache=true
     - name: Installs tmux
       apt: pkg=tmux state=installed update_cache=true
-
+    - name: create $HOME/bin
+      file: path=$HOME/bin state=directory
+    - name: Download the lein script
+      get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=$HOME/bin/lein
+    - name: chmod +x to the lein script
+      file: path=$HOME/bin/lein mode=a+x
+    - name: Execute the lein script
+      shell: $HOME/bin/lein
+    - name: create $HOME/clojure
+      file: path=$HOME/clojure state=directory    
+    - name: Download the clojure script
+      get_url: url=https://download.clojure.org/install/linux-install-1.9.0.358.sh dest=$HOME/clojure/linux-install-1.9.0.358.sh
+    - name: chmod +x to the clojure script
+      file: path=$HOME/clojure/linux-install-1.9.0.358.sh mode=a+x
+    - name: Execute the clojure script
+      shell: $HOME/clojure/linux-install-1.9.0.358.sh
     - user:
         name: vadim
         shell: /bin/zsh
