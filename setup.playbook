@@ -1,29 +1,28 @@
+---
 - hosts: tools
   tasks:
-    - name: Installs java
-      apt: pkg=openjdk-8-jdk state=installed update_cache=true
-    - name: Installs zsh
-      apt: pkg=zsh state=installed update_cache=true
-    - name: Installs tree
-      apt: pkg=tree state=installed update_cache=true
-    - name: Installs rlwrap
-      apt: pkg=rlwrap state=installed update_cache=true
-    - name: Installs tmux
-      apt: pkg=tmux state=installed update_cache=true
-    - name: create $HOME/bin
-      file: path=$HOME/bin state=directory
-    - name: Download the lein script
-      get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=$HOME/bin/lein
-    - name: chmod +x to the script
-      file: path=$HOME/bin/lein mode=a+x
-    - name: Execute the script
-      shell: $HOME/bin/lein
-    - name: Download the clojure script
-      get_url: url=https://download.clojure.org/install/linux-install-1.9.0.358.sh dest=$HOME/linux-install-1.9.0.358.sh
-    - name: chmod +x to the script
-      file: path=$HOME/linux-install-1.9.0.358.sh mode=a+x
-    - name: Execute the script
-      shell: $HOME/linux-install-1.9.0.358.sh
+    - name: Installs software
+      block:    
+      - apt: pkg={{ item }} state=installed update_cache=true
+        with_items:
+        - openjdk-8-jdk
+        - zsh
+        - rlwrap
+        - tree
+        - tmux
+    - name: Download and execute lein script
+      block:
+      - file: path=/opt/lein state=directory
+      - get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=/opt/lein/lein
+      - file: path=/opt/lein/lein mode=a+x
+      - shell: /opt/lein/lein
+    - name: Download and execute the clojure script
+      block:
+      - file: path=/opt/clojure state=directory 
+      - get_url: url=https://download.clojure.org/install/linux-install-1.9.0.358.sh dest=/opt/clojure/linux-install-1.9.0.358.sh
+      - file: path=/opt/clojure/linux-install-1.9.0.358.sh mode=a+x
+      - shell: /opt/clojure/linux-install-1.9.0.358.sh 
+      - command: export PATH="$PATH/opt/lein/:"
 
 
     - user:
