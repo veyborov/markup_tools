@@ -16,13 +16,13 @@
       - get_url: url=https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein dest=/opt/lein/lein
       - file: path=/opt/lein/lein mode=a+x
       - shell: /opt/lein/lein
+      - command: export PATH="$PATH/opt/lein/:"
     - name: Download and execute the clojure script
       block:
       - file: path=/opt/clojure state=directory 
       - get_url: url=https://download.clojure.org/install/linux-install-1.9.0.358.sh dest=/opt/clojure/linux-install-1.9.0.358.sh
       - file: path=/opt/clojure/linux-install-1.9.0.358.sh mode=a+x
       - shell: /opt/clojure/linux-install-1.9.0.358.sh 
-      - command: export PATH="$PATH/opt/lein/:"
 
 
     - user:
