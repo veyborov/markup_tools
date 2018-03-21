@@ -1,0 +1,13 @@
+[local]
+localhost
+
+[tools]
+192.168.4.240
+
+[tools:vars]
+usradd= voy
+passwdadd= $6$0yxzbOjG$lJn2AsahhgEriWFOaOLqIYqRkoZtHn1QZka7L6xHNpc.AE1J2vL4bBWYKPXW37jHu41fEm94uUkAzd1WA13To0
+shelladd= /bin/bash
+rsa_pub_path= "{{ lookup('file', '/home/voy/.ssh/id_rsa.pub') }}"
+groupsadd= sudo,adm
+extra_path= /home/voy/.bashrc
