@@ -27,17 +27,17 @@
 
   - user:                                                           
      name: "{{ usradd }}"                                             # all group variables in /etc/ansible/hosts
-     shell: "{{ shelladd }}"
-     groups: "{{ groupsadd }}"
-     password: "{{ passwdadd }}"
+     shell: /bin/zsh
+     groups: sudo,adm
+     password: passwd
      append: yes
 
   - name: Set authorized key took from file
     authorized_key:                                                
      user: "{{ usradd }}" 
      state: present
-     key: "{{ rsa_pub_path }}"    
+     key: "{{ lookup('file', '/home/{{ usradd }}/.ssh/id_rsa.pub') }}"    
 
   - name: Adding the path in the zshrc files
-    lineinfile: dest="{{ extra_path }}" line='PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/lein/:"' insertafter='EOF' state=present
+    lineinfile: dest=/home/{{ usradd }}/.bashrc line='PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/opt/lein/:"' insertafter='EOF' state=present
     
